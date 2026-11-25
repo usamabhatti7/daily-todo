@@ -1,5 +1,14 @@
 # Daily To-Do changelog
 
+## v1.7
+- Publisher name is now UB Labs: shown in the Windows installer and Apps list, in the README, the license and the app footer
+- Copyright line reads "Usama Bhatti, trading as UB Labs"
+- The app's internal ID is unchanged, so installed copies update in place and keep their saved tasks
+
+## v1.6
+- Dependabot now ignores major version jumps (Kotlin 2, Android Gradle Plugin 9 and similar), which broke the Android build and need manual migration
+- Only minor and patch dependency updates are proposed automatically
+
 ## v1.5
 - Animations: the page fades and slides in when it opens
 - New tasks slide in, deleted tasks slide away, and ticking a task gives the row and checkbox a small pop

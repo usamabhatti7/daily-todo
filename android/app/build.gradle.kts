@@ -2,7 +2,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
 android {
     namespace = "com.usama.dailytodo"
     compileSdk = 36
-    defaultConfig { applicationId = "com.usama.dailytodo"; minSdk = 26; targetSdk = 36; versionCode = 5; versionName = "1.5" }
+    defaultConfig { applicationId = "com.usama.dailytodo"; minSdk = 26; targetSdk = 36; versionCode = 7; versionName = "1.7" }
     buildTypes { release { isMinifyEnabled = true; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt")) } }
     buildFeatures { compose = true }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }

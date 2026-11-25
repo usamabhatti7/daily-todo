@@ -1,5 +1,7 @@
 # Daily To-Do
 
+By **UB Labs**
+
 ![Daily To-Do logo](logo/logo-512.png)
 
 A small daily task tracker: one list per day, priorities, a progress bar, moving unfinished tasks forward, and clearing completed ones. Tasks are stored on your device only.
@@ -57,4 +59,4 @@ See [SECURITY.md](SECURITY.md). Verify a download with `certutil -hashfile <file
 
 ## License
 
-Proprietary. Copyright (c) 2026 Usama Bhatti. All rights reserved. See [LICENSE](LICENSE).
+Proprietary. Copyright (c) 2026 Usama Bhatti, trading as UB Labs. All rights reserved. See [LICENSE](LICENSE).
