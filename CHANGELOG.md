@@ -1,5 +1,14 @@
 # Daily To-Do changelog
 
+## v1.5
+- Animations: the page fades and slides in when it opens
+- New tasks slide in, deleted tasks slide away, and ticking a task gives the row and checkbox a small pop
+- Moving between days slides the list left or right
+- Finishing every task of the day sets off a confetti burst and a glow on the progress card
+- The History tab animates its summary boxes and rows when it opens
+- Buttons lift on hover and press down when clicked, and the logo wiggles on hover
+- Everything switches off automatically if Windows "Show animations" is turned off (reduced motion)
+
 ## v1.4
 - Easy install: the release now always contains DailyTodo-Setup.exe (installer) and DailyTodo-Portable.exe under fixed names
 - README has a one-click Download for Windows link that always points to the latest version

@@ -39,6 +39,27 @@
   var cur=todayStr, filter="all", editing=null;
   var $=function(id){return document.getElementById(id);};
 
+  var fx={enter:null,pop:null,slide:null,celebrate:false,histIn:false};
+  var REDUCED=!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  function celebrate(){
+    var card=document.querySelector(".progress"), bar=$("bar");
+    if(card){card.classList.remove("glow");void card.offsetWidth;card.classList.add("glow");}
+    if(REDUCED)return;
+    var r=bar.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+    var colors=["#0e7466","#3cc4ae","#facc15","#fb923c","#7ab4f0","#c2410c"];
+    for(var i=0;i<30;i++){
+      var e=document.createElement("span"); e.className="conf";
+      var a=Math.random()*Math.PI*2, d=80+Math.random()*160;
+      e.style.left=cx+"px"; e.style.top=cy+"px";
+      e.style.setProperty("--c",colors[i%colors.length]);
+      e.style.setProperty("--dx",Math.round(Math.cos(a)*d)+"px");
+      e.style.setProperty("--dy",Math.round(Math.sin(a)*d+60)+"px");
+      e.style.setProperty("--rot",Math.round(Math.random()*720-360)+"deg");
+      document.body.appendChild(e);
+      setTimeout((function(el){return function(){el.remove();};})(e),1400);
+    }
+  }
+  function slideTo(day){fx.slide=day<cur?"r":day>cur?"l":null;}
   function tasks(){return state.tasks[cur]||(state.tasks[cur]=[]);}
   function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
@@ -60,16 +81,21 @@
     var shown=all.filter(function(t){return filter==="all"||(filter==="done"?t.done:!t.done);})
       .sort(function(a,b){return (a.done-b.done)||(order[a.pri]-order[b.pri]);});
 
-    var ul=$("list"); ul.textContent="";
+    var ul=$("list"); ul.textContent=""; ul.className=""; if(fx.slide&&!REDUCED){void ul.offsetWidth;ul.className="slide-"+fx.slide;} fx.slide=null;
     if(!shown.length){
       var e=document.createElement("div"); e.className="empty";
       e.textContent=all.length?"Nothing here with this filter.":"No tasks yet. Add your first task above.";
       ul.appendChild(e);
     }
     shown.forEach(function(t){
-      var li=document.createElement("li"); li.className="task p-"+t.pri+(t.done?" done":"");
+      var li=document.createElement("li"); li.className="task p-"+t.pri+(t.done?" done":"")+(fx.enter===t.id?" enter":"")+(fx.pop===t.id?" pop":"");
       var cb=document.createElement("input"); cb.type="checkbox"; cb.checked=t.done; cb.setAttribute("aria-label","Mark done: "+t.text);
-      cb.onchange=function(){t.done=cb.checked;t.doneAt=cb.checked?Date.now():null;save();render();};
+      cb.onchange=function(){
+        t.done=cb.checked;t.doneAt=cb.checked?Date.now():null;fx.pop=t.id;
+        var vis=tasks().filter(function(x){return !x.hidden;});
+        if(cb.checked&&vis.length&&vis.every(function(x){return x.done;}))fx.celebrate=true;
+        save();render();
+      };
       li.appendChild(cb);
       if(editing===t.id){
         var inp=document.createElement("input"); inp.className="edit"; inp.value=t.text; inp.maxLength=200;
@@ -84,11 +110,13 @@
         li.appendChild(b);
       }
       var del=document.createElement("button"); del.className="del"; del.textContent="×"; del.setAttribute("aria-label","Delete task: "+t.text);
-      del.onclick=function(){t.hidden="deleted";save();render();};
+      del.onclick=function(){li.classList.add("leave");setTimeout(function(){t.hidden="deleted";save();render();},REDUCED?0:220);};
       li.appendChild(del);
       ul.appendChild(li);
     });
 
+    fx.enter=null;fx.pop=null;
+    if(fx.celebrate){fx.celebrate=false;celebrate();}
     var prevOpen=(state.tasks[shift(cur,-1)]||[]).filter(function(t){return !t.done&&!t.hidden;}).length;
     $("carry").style.display=prevOpen?"":"none";
     $("carry").textContent="Move "+prevOpen+" unfinished "+(prevOpen===1?"task":"tasks")+" from the day before";
@@ -98,15 +126,15 @@
 
   function add(){
     var v=$("newText").value.trim(); if(!v){$("newText").focus();return;}
-    tasks().push({id:uid(),text:v,done:false,pri:$("newPri").value,created:Date.now()});
+    var nid=uid(); fx.enter=nid; tasks().push({id:nid,text:v,done:false,pri:$("newPri").value,created:Date.now()});
     $("newText").value=""; save(); render(); $("newText").focus();
   }
   $("addBtn").onclick=add;
   $("newText").onkeydown=function(e){if(e.key==="Enter")add();};
-  $("prev").onclick=function(){cur=shift(cur,-1);editing=null;render();};
-  $("next").onclick=function(){cur=shift(cur,1);editing=null;render();};
-  $("today").onclick=function(){cur=todayStr;editing=null;render();};
-  $("pick").onchange=function(e){if(e.target.value){cur=e.target.value;editing=null;render();}};
+  $("prev").onclick=function(){fx.slide="r";cur=shift(cur,-1);editing=null;render();};
+  $("next").onclick=function(){fx.slide="l";cur=shift(cur,1);editing=null;render();};
+  $("today").onclick=function(){slideTo(todayStr);cur=todayStr;editing=null;render();};
+  $("pick").onchange=function(e){if(e.target.value){slideTo(e.target.value);cur=e.target.value;editing=null;render();}};
   $("clearDone").onclick=function(){tasks().forEach(function(t){if(t.done&&!t.hidden)t.hidden="cleared";});save();render();};
   $("carry").onclick=function(){
     var py=shift(cur,-1), src=state.tasks[py]||[];
@@ -129,15 +157,15 @@
     Object.keys(state.tasks).forEach(function(d){(state.tasks[d]||[]).forEach(function(t){rows.push({d:d,t:t});});});
     var c={Total:rows.length,Done:0,Open:0,Removed:0};
     rows.forEach(function(r){var s=status(r.t);c[s==="done"?"Done":s==="open"?"Open":"Removed"]++;});
-    var st=$("stats"); st.textContent="";
+    var st=$("stats"); st.textContent=""; st.className=fx.histIn?"stats sin":"stats";
     Object.keys(c).forEach(function(k){var e=document.createElement("div");e.className="stat";var b=document.createElement("b");b.textContent=c[k];var sp=document.createElement("span");sp.textContent=k;e.appendChild(b);e.appendChild(sp);st.appendChild(e);});
     var q=$("q").value.trim().toLowerCase(), f=$("hf").value;
     var shown=rows.filter(function(r){return (f==="all"||status(r.t)===f)&&(!q||r.t.text.toLowerCase().indexOf(q)>=0);});
     shown.sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:0;});
-    var box=$("histList"); box.textContent="";
+    var box=$("histList"); box.textContent=""; box.className=fx.histIn?"hin":""; fx.histIn=false;
     if(!shown.length){var em=document.createElement("div");em.className="empty";em.textContent=rows.length?"No tasks match.":"No tasks recorded yet.";box.appendChild(em);return;}
     var last="";
-    shown.forEach(function(r){
+    shown.forEach(function(r,i){
       if(r.d!==last){
         last=r.d;
         var h=document.createElement("button");h.className="dh";h.title="Open this day";
@@ -145,7 +173,7 @@
         h.onclick=function(){cur=r.d;setView(false);};
         box.appendChild(h);
       }
-      var t=r.t,s=status(t),row=document.createElement("div");row.className="hrow p-"+t.pri;
+      var t=r.t,s=status(t),row=document.createElement("div");row.className="hrow p-"+t.pri; row.style.animationDelay=Math.min(i*30,420)+"ms";
       var tx=document.createElement("span");tx.className="htxt"+(s==="done"?" hdone":"");tx.textContent=t.text;row.appendChild(tx);
       var bd=document.createElement("span");bd.className="badge "+s;
       bd.textContent=s==="removed"?(t.hidden==="cleared"?"Cleared":"Deleted"):(s==="done"?"Done":"Open");row.appendChild(bd);
@@ -164,7 +192,7 @@
     document.body.classList.toggle("hist",h);
     $("tabDay").setAttribute("aria-pressed",h?"false":"true");
     $("tabHist").setAttribute("aria-pressed",h?"true":"false");
-    editing=null; render();
+    editing=null; fx.histIn=h; render();
   }
   $("tabDay").onclick=function(){setView(false);};
   $("tabHist").onclick=function(){setView(true);};
