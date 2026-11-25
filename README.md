@@ -6,15 +6,14 @@ A small daily task tracker: one list per day, priorities, a progress bar, moving
 
 | Folder | What it is |
 |---|---|
-| `web/` | The app as one offline HTML file. Deployed to GitHub Pages. |
+| `web/` | The app (HTML, CSS, JS, no external requests). Used by the Windows app and deployed to GitHub Pages. |
 | `desktop/` | Windows .exe installer (Tauri). |
 | `android/` | Native Android app (Kotlin, Jetpack Compose). |
-| `windows-quick-install/` | No-build Windows install that runs the web app in its own Edge window. |
 | `logo/` | Logo source (SVG) and PNGs, including the 512x512 Play Store icon. |
 
 ## Download
 
-Pushing a version tag (for example `v1.1`) builds everything and attaches the Windows installer and the Android APK to a GitHub Release.
+Pushing a version tag (for example `v1.1`) builds everything and attaches the Windows installer and a SHA256SUMS.txt checksum file to a GitHub Release.
 
 ## Build locally
 
@@ -42,6 +41,10 @@ git commit -am "v1.2" && git tag v1.2 && git push && git push --tags
 
 Play needs a signed Android App Bundle, an app signing key you keep safe, a privacy policy URL, and (for new personal accounts) a closed test with 12 testers for 14 days. Check Google's Play Console help for current rules.
 
+## Security
+
+See [SECURITY.md](SECURITY.md). Verify a download with `certutil -hashfile <file> SHA256` and compare it with `SHA256SUMS.txt` on the release.
+
 ## License
 
-MIT
+Proprietary. Copyright (c) 2026 Usama Bhatti. All rights reserved. See [LICENSE](LICENSE).
