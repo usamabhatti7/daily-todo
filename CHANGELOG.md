@@ -1,5 +1,10 @@
 # Daily To-Do changelog
 
+## v1.4
+- Easy install: the release now always contains DailyTodo-Setup.exe (installer) and DailyTodo-Portable.exe under fixed names
+- README has a one-click Download for Windows link that always points to the latest version
+- Release notes include install steps
+
 ## v1.3
 - Licence changed to proprietary, all rights reserved to Usama Bhatti
 - Security hardening: strict Content Security Policy in the Windows app and web version, no inline scripts or styles

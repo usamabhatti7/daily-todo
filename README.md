@@ -4,6 +4,16 @@
 
 A small daily task tracker: one list per day, priorities, a progress bar, moving unfinished tasks forward, and clearing completed ones. Tasks are stored on your device only.
 
+## Download for Windows
+
+**[Download DailyTodo-Setup.exe](https://github.com/usamabhatti7/daily-todo/releases/latest/download/DailyTodo-Setup.exe)** (always the latest version)
+
+1. Click the link above and save the file.
+2. Double-click `DailyTodo-Setup.exe`. If Windows SmartScreen warns, click **More info**, then **Run anyway**. The app is not code-signed yet.
+3. Open **Daily To-Do** from the Start menu.
+
+No installer needed? Get [DailyTodo-Portable.exe](https://github.com/usamabhatti7/daily-todo/releases/latest/download/DailyTodo-Portable.exe). All versions and checksums are on the [Releases page](https://github.com/usamabhatti7/daily-todo/releases). To uninstall, use Windows **Settings > Apps > Installed apps**.
+
 | Folder | What it is |
 |---|---|
 | `web/` | The app (HTML, CSS, JS, no external requests). Used by the Windows app and deployed to GitHub Pages. |
@@ -11,7 +21,7 @@ A small daily task tracker: one list per day, priorities, a progress bar, moving
 | `android/` | Native Android app (Kotlin, Jetpack Compose). |
 | `logo/` | Logo source (SVG) and PNGs, including the 512x512 Play Store icon. |
 
-## Download
+## How releases are made
 
 Pushing a version tag (for example `v1.1`) builds everything and attaches the Windows installer and a SHA256SUMS.txt checksum file to a GitHub Release.
 

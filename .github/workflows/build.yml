@@ -65,9 +65,12 @@ jobs:
       - name: Collect files and checksums
         run: |
           mkdir out
-          find dist -type f -name '*.exe' -exec cp {} out/ \;
+          find dist -type f -name '*setup.exe' -exec cp {} out/DailyTodo-Setup.exe \;
+          find dist -type f -name 'daily-todo.exe' -exec cp {} out/DailyTodo-Portable.exe \;
           cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --generate-notes
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --generate-notes \
+            --notes "**Install:** download **DailyTodo-Setup.exe** below and run it. Or use DailyTodo-Portable.exe, which needs no install. If Windows SmartScreen warns, click More info, then Run anyway."
