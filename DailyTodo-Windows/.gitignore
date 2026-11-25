@@ -1,0 +1,11 @@
+node_modules/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.jks
+*.keystore
+.idea/
+.DS_Store

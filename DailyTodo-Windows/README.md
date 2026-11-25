@@ -1,0 +1,47 @@
+# Daily To-Do
+
+![Daily To-Do logo](logo/logo-512.png)
+
+A small daily task tracker: one list per day, priorities, a progress bar, moving unfinished tasks forward, and clearing completed ones. Tasks are stored on your device only.
+
+| Folder | What it is |
+|---|---|
+| `web/` | The app as one offline HTML file. Deployed to GitHub Pages. |
+| `desktop/` | Windows .exe installer (Tauri). |
+| `android/` | Native Android app (Kotlin, Jetpack Compose). |
+| `windows-quick-install/` | No-build Windows install that runs the web app in its own Edge window. |
+| `logo/` | Logo source (SVG) and PNGs, including the 512x512 Play Store icon. |
+
+## Download
+
+Pushing a version tag (for example `v1.1`) builds everything and attaches the Windows installer and the Android APK to a GitHub Release.
+
+## Build locally
+
+**Windows .exe** (needs Node.js LTS and Rust with the C++ Build Tools):
+
+```
+cd desktop
+npm install
+npm run build
+```
+
+Installer: `desktop/src-tauri/target/release/bundle/nsis/`
+
+**Android** (needs Android Studio): open the `android/` folder and press Run, or Build > Build APK(s).
+
+## Releasing a new version
+
+```
+./scripts/bump-version.sh 1.2      # updates every version number
+# add a "## v1.2" section to CHANGELOG.md
+git commit -am "v1.2" && git tag v1.2 && git push && git push --tags
+```
+
+## Publishing to Google Play
+
+Play needs a signed Android App Bundle, an app signing key you keep safe, a privacy policy URL, and (for new personal accounts) a closed test with 12 testers for 14 days. Check Google's Play Console help for current rules.
+
+## License
+
+MIT
