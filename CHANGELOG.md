@@ -1,5 +1,9 @@
 # Daily To-Do changelog
 
+## v1.8
+- Android: added the Gradle wrapper (Gradle 8.11.1) so Android Studio syncs and builds without extra setup
+- The GitHub Android build now uses the same wrapper
+
 ## v1.7
 - Publisher name is now UB Labs: shown in the Windows installer and Apps list, in the README, the license and the app footer
 - Copyright line reads "Usama Bhatti, trading as UB Labs"
