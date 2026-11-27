@@ -1,5 +1,9 @@
 # Daily To-Do changelog
 
+## v1.9
+- Android: added a Compose Preview so the screen can be seen and edited live inside Android Studio
+- Android: added the Compose tooling libraries that Live Edit and Preview need (debug builds only for the tooling)
+
 ## v1.8
 - Android: added the Gradle wrapper (Gradle 8.11.1) so Android Studio syncs and builds without extra setup
 - The GitHub Android build now uses the same wrapper

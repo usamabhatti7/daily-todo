@@ -13,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -126,5 +128,14 @@ fun TodoApp(store: Store) {
             }) { Text("Move ${prevOpen.size} unfinished from yesterday") }
             if (done > 0) TextButton(onClick = { put(mapOf(key to (data[key] ?: emptyList()).filter { !it.done })) }) { Text("Clear completed") }
         }
+    }
+}
+
+// Live preview: open this file in Android Studio and choose Split (top right) to see it update as you type.
+@Preview(showBackground = true, widthDp = 360, heightDp = 740, name = "Daily To-Do (light)")
+@Composable
+fun TodoPreview() {
+    MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF0E7466), background = Color(0xFFE9EEF3), surface = Color.White)) {
+        Surface(color = MaterialTheme.colorScheme.background) { TodoApp(Store(LocalContext.current)) }
     }
 }
