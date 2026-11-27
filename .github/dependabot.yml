@@ -21,5 +21,8 @@ updates:
     directory: /android
     schedule: { interval: weekly }
     ignore:
+      # Kotlin and the Compose compiler must be upgraded together by hand
+      - dependency-name: "org.jetbrains.kotlin*"
+      - dependency-name: "androidx.compose.compiler*"
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]

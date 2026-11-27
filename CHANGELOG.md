@@ -1,5 +1,9 @@
 # Daily To-Do changelog
 
+## v2.0
+- Fixed the Android build error: Kotlin 1.9.25 now matches Compose compiler 1.5.15
+- Dependabot no longer proposes Kotlin or Compose compiler updates on their own, because the two must be upgraded together by hand
+
 ## v1.9
 - Android: added a Compose Preview so the screen can be seen and edited live inside Android Studio
 - Android: added the Compose tooling libraries that Live Edit and Preview need (debug builds only for the tooling)
