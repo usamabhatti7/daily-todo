@@ -23,6 +23,12 @@ No installer needed? Get [DailyTodo-Portable.exe](https://github.com/usamabhatti
 | `android/` | Native Android app (Kotlin, Jetpack Compose). |
 | `logo/` | Logo source (SVG) and PNGs, including the 512x512 Play Store icon. |
 
+## Android: install and updates
+
+Download `DailyTodo.apk` from the [latest release](https://github.com/usamabhatti7/daily-todo/releases/latest) and open it on your phone (Android asks you to allow installs from your browser once). Inside the app, tap **Updates** to check for a newer version and choose **Update now** or **Later**. Your tasks are kept.
+
+The APK is only attached to a release when the repository has these four secrets (Settings > Secrets and variables > Actions): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. The same key must be used for every release, otherwise Android refuses to update the app in place. Never commit the `.jks` file and keep two backups of it.
+
 ## How releases are made
 
 Pushing a version tag (for example `v1.1`) builds everything and attaches the Windows installer and a SHA256SUMS.txt checksum file to a GitHub Release.

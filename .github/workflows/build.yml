@@ -11,8 +11,9 @@ permissions:
 
 jobs:
   android:
-    # Build check only. The debug APK is not attached to public releases.
     runs-on: ubuntu-latest
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     defaults:
       run:
         working-directory: android
@@ -23,12 +24,37 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      - run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+
+      # Without signing secrets: build check only (debug APK kept 3 days, never published)
+      - name: Build debug APK (check only)
+        if: env.HAS_KEYSTORE != 'true'
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
+        if: env.HAS_KEYSTORE != 'true'
         with:
           name: android-debug-apk
           retention-days: 3
           path: android/app/build/outputs/apk/debug/*.apk
+
+      # With signing secrets: signed release APK that updates in place
+      - name: Decode signing key
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+      - name: Build signed release APK
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: env.HAS_KEYSTORE == 'true'
+        with:
+          name: android-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
 
   windows:
     runs-on: windows-latest
@@ -51,24 +77,24 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows]
+    needs: [android, windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: windows-installer
           path: dist
       - name: Collect files and checksums
         run: |
           mkdir out
-          find dist -type f -name '*setup.exe' -exec cp {} out/DailyTodo-Setup.exe \;
-          find dist -type f -name 'daily-todo.exe' -exec cp {} out/DailyTodo-Portable.exe \;
+          find dist/windows-installer -type f -name '*setup.exe' -exec cp {} out/DailyTodo-Setup.exe \;
+          find dist/windows-installer -type f -name 'daily-todo.exe' -exec cp {} out/DailyTodo-Portable.exe \;
+          if [ -d dist/android-release-apk ]; then cp dist/android-release-apk/*.apk out/DailyTodo.apk; fi
           cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --generate-notes \
-            --notes "**Install:** download **DailyTodo-Setup.exe** below and run it. Or use DailyTodo-Portable.exe, which needs no install. If Windows SmartScreen warns, click More info, then Run anyway."
+            --notes "**Windows:** download **DailyTodo-Setup.exe** and run it (or DailyTodo-Portable.exe, no install). **Android:** download **DailyTodo.apk** and open it, or use the Updates button inside the app. If Windows SmartScreen warns, click More info, then Run anyway."

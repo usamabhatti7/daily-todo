@@ -2,10 +2,13 @@ package com.usama.dailytodo
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -13,10 +16,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -29,11 +34,12 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import org.json.JSONArray
 import org.json.JSONObject
-import java.time.Instant
+import java.net.URL
 import java.time.LocalDate
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.UUID
+import javax.net.ssl.HttpsURLConnection
+import kotlin.concurrent.thread
 
 // pri: 0 high, 1 medium, 2 low.  hidden: 0 visible, 1 deleted, 2 cleared (kept in History)
 data class Task(
@@ -167,22 +173,129 @@ fun ThemeMenu(mode: Int, onTheme: (Int) -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Small month calendar shown as a popover under the date (like the Windows date picker)
 @Composable
-fun DayPickerDialog(day: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
-                onDismiss()
-            }) { Text("OK") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    ) { DatePicker(state = state) }
+fun CompactCalendar(selected: LocalDate, onPick: (LocalDate) -> Unit) {
+    var month by remember { mutableStateOf(selected.withDayOfMonth(1)) }
+    val today = LocalDate.now()
+    val start = month.minusDays((month.dayOfWeek.value % 7).toLong())
+    val primary = MaterialTheme.colorScheme.primary
+    Column(Modifier.width(264.dp).padding(horizontal = 6.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                month.format(DateTimeFormatter.ofPattern("MMMM yyyy")), fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f).padding(start = 6.dp)
+            )
+            TextButton(onClick = { month = month.minusMonths(1) }) { Text("\u2039") }
+            TextButton(onClick = { month = month.plusMonths(1) }) { Text("\u203A") }
+        }
+        Row {
+            listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa").forEach {
+                Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                    Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = .6f))
+                }
+            }
+        }
+        for (row in 0 until 6) {
+            Row {
+                for (col in 0 until 7) {
+                    val d = start.plusDays((row * 7 + col).toLong())
+                    val inMonth = d.month == month.month
+                    val isSel = d == selected
+                    Box(
+                        Modifier.size(36.dp).padding(2.dp).clip(CircleShape)
+                            .then(
+                                if (isSel) Modifier.background(primary)
+                                else if (d == today) Modifier.border(1.dp, primary, CircleShape)
+                                else Modifier
+                            )
+                            .clickable { onPick(d) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "${d.dayOfMonth}", fontSize = 13.sp,
+                            color = when {
+                                isSel -> MaterialTheme.colorScheme.onPrimary
+                                inMonth -> MaterialTheme.colorScheme.onSurface
+                                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = .35f)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        TextButton(onClick = { onPick(today) }, modifier = Modifier.align(Alignment.End)) { Text("Today") }
+    }
+}
+
+// ---------- Update check (GitHub Releases) ----------
+private const val RELEASES_API = "https://api.github.com/repos/usamabhatti7/daily-todo/releases/latest"
+private const val RELEASES_PREFIX = "https://github.com/usamabhatti7/daily-todo/releases/"
+
+sealed class UpdateState {
+    object Checking : UpdateState()
+    object UpToDate : UpdateState()
+    data class Available(val version: String, val apkUrl: String?, val pageUrl: String) : UpdateState()
+    data class Failed(val message: String) : UpdateState()
+}
+
+fun versionParts(v: String): List<Int> =
+    v.trim().removePrefix("v").split(".").map { p -> p.takeWhile { it.isDigit() }.toIntOrNull() ?: 0 }
+
+fun isNewer(latest: String, current: String): Boolean {
+    val a = versionParts(latest)
+    val b = versionParts(current)
+    for (i in 0 until maxOf(a.size, b.size)) {
+        val x = a.getOrElse(i) { 0 }
+        val y = b.getOrElse(i) { 0 }
+        if (x != y) return x > y
+    }
+    return false
+}
+
+// Runs on a background thread. Only talks to api.github.com over HTTPS and only accepts
+// download links that point into this repository's releases.
+fun checkForUpdate(current: String, onResult: (UpdateState) -> Unit) {
+    thread {
+        val result: UpdateState = try {
+            val conn = URL(RELEASES_API).openConnection() as HttpsURLConnection
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+            conn.setRequestProperty("Accept", "application/vnd.github+json")
+            conn.setRequestProperty("User-Agent", "DailyTodo-Android")
+            if (conn.responseCode != 200) {
+                UpdateState.Failed("GitHub answered with code ${conn.responseCode}.")
+            } else {
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                val o = JSONObject(body)
+                val tag = o.optString("tag_name", "")
+                var apk: String? = null
+                val assets = o.optJSONArray("assets")
+                if (assets != null) {
+                    for (i in 0 until assets.length()) {
+                        val item = assets.optJSONObject(i) ?: continue
+                        val url = item.optString("browser_download_url", "")
+                        if (item.optString("name") == "DailyTodo.apk" && url.startsWith(RELEASES_PREFIX)) apk = url
+                    }
+                }
+                val htmlUrl = o.optString("html_url", "")
+                val page = if (htmlUrl.startsWith(RELEASES_PREFIX)) htmlUrl else RELEASES_PREFIX + "latest"
+                if (tag.isNotEmpty() && isNewer(tag, current)) UpdateState.Available(tag.removePrefix("v"), apk, page)
+                else UpdateState.UpToDate
+            }
+        } catch (e: Exception) {
+            UpdateState.Failed("Could not reach GitHub. Check your internet connection and try again.")
+        }
+        onResult(result)
+    }
+}
+
+fun openUrl(ctx: Context, url: String) {
+    try {
+        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    } catch (e: Exception) {
+        // no browser available
+    }
 }
 
 // Reads the version from the installed app, so it always matches versionName in build.gradle.kts
@@ -199,6 +312,9 @@ fun TodoApp(store: Store, themeMode: Int = 0, onTheme: (Int) -> Unit = {}) {
     var data by remember { mutableStateOf(store.load()) }
     var day by remember { mutableStateOf(LocalDate.now()) }
     var tab by remember { mutableIntStateOf(0) }
+    var updateState by remember { mutableStateOf<UpdateState?>(null) }
+    val ver = appVersion()
+    val ctx = LocalContext.current
 
     fun put(changes: Map<String, List<Task>>) { data = data + changes; store.save(data) }
 
@@ -209,6 +325,10 @@ fun TodoApp(store: Store, themeMode: Int = 0, onTheme: (Int) -> Unit = {}) {
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("History") })
             }
             ThemeMenu(themeMode, onTheme)
+            TextButton(onClick = {
+                updateState = UpdateState.Checking
+                checkForUpdate(ver) { updateState = it }
+            }) { Text("Updates") }
         }
         Spacer(Modifier.height(8.dp))
         if (tab == 0) {
@@ -216,12 +336,53 @@ fun TodoApp(store: Store, themeMode: Int = 0, onTheme: (Int) -> Unit = {}) {
         } else {
             HistoryScreen(data, ::put) { d -> day = d; tab = 0 }
         }
-        val ver = appVersion()
         Text(
             if (ver.isEmpty()) "Daily To-Do \u00B7 UB Labs" else "Daily To-Do v$ver \u00B7 UB Labs",
             fontSize = 12.sp, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = .55f),
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+        )
+    }
+
+    updateState?.let { st ->
+        AlertDialog(
+            onDismissRequest = { if (st !is UpdateState.Checking) updateState = null },
+            title = {
+                Text(
+                    when (st) {
+                        is UpdateState.Checking -> "Checking for updates..."
+                        is UpdateState.UpToDate -> "You're up to date"
+                        is UpdateState.Available -> "Update available"
+                        is UpdateState.Failed -> "Couldn't check"
+                    }
+                )
+            },
+            text = {
+                Text(
+                    when (st) {
+                        is UpdateState.Checking -> "Contacting GitHub..."
+                        is UpdateState.UpToDate -> "Daily To-Do v$ver is the latest version."
+                        is UpdateState.Available ->
+                            "Version ${st.version} is available (you have v$ver). Tap Update now to download it, then open the " +
+                                "downloaded file to install. Your tasks are kept." +
+                                (if (st.apkUrl == null) "\n\nThe Android file isn't attached to this release yet, so Update now opens the release page." else "")
+                        is UpdateState.Failed -> st.message
+                    }
+                )
+            },
+            confirmButton = {
+                when (st) {
+                    is UpdateState.Available -> TextButton(onClick = {
+                        openUrl(ctx, st.apkUrl ?: st.pageUrl)
+                        updateState = null
+                    }) { Text("Update now") }
+                    is UpdateState.Checking -> {}
+                    else -> TextButton(onClick = { updateState = null }) { Text("OK") }
+                }
+            },
+            dismissButton = {
+                if (st is UpdateState.Available) TextButton(onClick = { updateState = null }) { Text("Later") }
+            }
         )
     }
 }
@@ -260,11 +421,16 @@ fun ColumnScope.DayScreen(
         day.format(DateTimeFormatter.ofPattern("EEEE")), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold,
         modifier = Modifier.clickable { showPicker = true }.padding(top = 12.dp)
     )
-    Text(
-        day.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")) + "  \u25BE",
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = .65f),
-        modifier = Modifier.clickable { showPicker = true }
-    )
+    Box {
+        Text(
+            day.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")) + "  \u25BE",
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = .65f),
+            modifier = Modifier.clickable { showPicker = true }
+        )
+        DropdownMenu(expanded = showPicker, onDismissRequest = { showPicker = false }) {
+            CompactCalendar(day) { picked -> onDay(picked); showPicker = false }
+        }
+    }
     Spacer(Modifier.height(12.dp))
     Text("$done of ${tasks.size} done", fontWeight = FontWeight.SemiBold)
     LinearProgressIndicator(progress = { frac }, modifier = Modifier.fillMaxWidth().height(10.dp).padding(top = 4.dp))
@@ -318,7 +484,6 @@ fun ColumnScope.DayScreen(
             put(mapOf(key to all.map { if (it.done && it.hidden == 0) it.copy(hidden = 2) else it }))
         }) { Text("Clear completed") }
     }
-    if (showPicker) DayPickerDialog(day, onPick = onDay, onDismiss = { showPicker = false })
 }
 
 @Composable

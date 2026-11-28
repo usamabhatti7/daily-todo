@@ -1,5 +1,11 @@
 # Daily To-Do changelog
 
+## v2.3 (Android)
+- The calendar is now a compact popover under the date, like the Windows one, instead of a large dialog
+- New Updates button: checks GitHub for a newer version and offers Update now or Later
+- Releases now include a signed DailyTodo.apk (when signing secrets are set), so Android can update the app in place and keep your tasks
+- Android now has the Internet permission, used only when you tap Updates
+
 ## v2.2
 - Tap the day name or the date to open a calendar and jump to any day (Android calendar dialog, Windows date picker)
 - The version number is now shown at the bottom of both the Windows and the Android app, on every screen
