@@ -1,5 +1,16 @@
 # Daily To-Do changelog
 
+## v2.1 (Android)
+- Theme switch for the whole app: System default, Light or Dark (Theme menu, top right). Your choice is remembered
+- Status bar and navigation bar icons follow the chosen theme
+- New History tab, like the Windows app: every task ever added, with Total, Done, Open and Removed counts
+- Search and filters (All, Done, Open, Removed) in History
+- Deleting a task or tapping Clear completed now keeps it in History (marked Deleted or Cleared)
+- Restore removed tasks, or Delete forever (with a confirmation)
+- Tap a date in History to jump to that day
+- Moving unfinished tasks from yesterday now moves the original task, so History has no duplicates
+- Saved tasks from earlier versions load and appear in History automatically
+
 ## v2.0
 - Fixed the Android build error: Kotlin 1.9.25 now matches Compose compiler 1.5.15
 - Dependabot no longer proposes Kotlin or Compose compiler updates on their own, because the two must be upgraded together by hand
