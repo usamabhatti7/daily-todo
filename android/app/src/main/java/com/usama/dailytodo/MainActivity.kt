@@ -29,7 +29,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -165,6 +167,33 @@ fun ThemeMenu(mode: Int, onTheme: (Int) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DayPickerDialog(day: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
+    val state = rememberDatePickerState(
+        initialSelectedDateMillis = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
+                onDismiss()
+            }) { Text("OK") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    ) { DatePicker(state = state) }
+}
+
+// Reads the version from the installed app, so it always matches versionName in build.gradle.kts
+@Composable
+fun appVersion(): String {
+    val ctx = LocalContext.current
+    return remember {
+        try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "" } catch (e: Exception) { "" }
+    }
+}
+
 @Composable
 fun TodoApp(store: Store, themeMode: Int = 0, onTheme: (Int) -> Unit = {}) {
     var data by remember { mutableStateOf(store.load()) }
@@ -187,6 +216,13 @@ fun TodoApp(store: Store, themeMode: Int = 0, onTheme: (Int) -> Unit = {}) {
         } else {
             HistoryScreen(data, ::put) { d -> day = d; tab = 0 }
         }
+        val ver = appVersion()
+        Text(
+            if (ver.isEmpty()) "Daily To-Do \u00B7 UB Labs" else "Daily To-Do v$ver \u00B7 UB Labs",
+            fontSize = 12.sp, textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = .55f),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+        )
     }
 }
 
@@ -199,6 +235,7 @@ fun ColumnScope.DayScreen(
 ) {
     var text by remember { mutableStateOf("") }
     var pri by remember { mutableIntStateOf(1) }
+    var showPicker by remember { mutableStateOf(false) }
     val key = day.toString()
     val all = data[key] ?: emptyList()
     val tasks = all.filter { it.hidden == 0 }.sortedWith(compareBy({ it.done }, { it.pri }))
@@ -221,11 +258,12 @@ fun ColumnScope.DayScreen(
     }
     Text(
         day.format(DateTimeFormatter.ofPattern("EEEE")), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold,
-        modifier = Modifier.padding(top = 12.dp)
+        modifier = Modifier.clickable { showPicker = true }.padding(top = 12.dp)
     )
     Text(
-        day.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = .65f)
+        day.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")) + "  \u25BE",
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = .65f),
+        modifier = Modifier.clickable { showPicker = true }
     )
     Spacer(Modifier.height(12.dp))
     Text("$done of ${tasks.size} done", fontWeight = FontWeight.SemiBold)
@@ -280,6 +318,7 @@ fun ColumnScope.DayScreen(
             put(mapOf(key to all.map { if (it.done && it.hidden == 0) it.copy(hidden = 2) else it }))
         }) { Text("Clear completed") }
     }
+    if (showPicker) DayPickerDialog(day, onPick = onDay, onDismiss = { showPicker = false })
 }
 
 @Composable

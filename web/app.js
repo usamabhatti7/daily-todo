@@ -134,6 +134,9 @@
   $("prev").onclick=function(){fx.slide="r";cur=shift(cur,-1);editing=null;render();};
   $("next").onclick=function(){fx.slide="l";cur=shift(cur,1);editing=null;render();};
   $("today").onclick=function(){slideTo(todayStr);cur=todayStr;editing=null;render();};
+  function openPicker(){var p=$("pick");try{if(p.showPicker){p.showPicker();return;}}catch(e){}p.focus();}
+  $("dateTitle").onclick=openPicker; $("dateSub").onclick=openPicker;
+  $("dateTitle").onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openPicker();}};
   $("pick").onchange=function(e){if(e.target.value){slideTo(e.target.value);cur=e.target.value;editing=null;render();}};
   $("clearDone").onclick=function(){tasks().forEach(function(t){if(t.done&&!t.hidden)t.hidden="cleared";});save();render();};
   $("carry").onclick=function(){

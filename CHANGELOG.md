@@ -1,5 +1,10 @@
 # Daily To-Do changelog
 
+## v2.2
+- Tap the day name or the date to open a calendar and jump to any day (Android calendar dialog, Windows date picker)
+- The version number is now shown at the bottom of both the Windows and the Android app, on every screen
+- Android reads the version from the installed app, so it can never get out of step with the build
+
 ## v2.1 (Android)
 - Theme switch for the whole app: System default, Light or Dark (Theme menu, top right). Your choice is remembered
 - Status bar and navigation bar icons follow the chosen theme
